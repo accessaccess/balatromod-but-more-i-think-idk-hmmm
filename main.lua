@@ -89,6 +89,9 @@ require "mods/imbored/decks/circus_deck"
 
 math.randomseed( G.SEED )
 
+_LOADED_MODS = { "imbored (built-in)" }
+local _mods_font = nil  -- set once on first draw
+
 local function load_external_mods()
     local mods_path = "/storage/emulated/0/Balatro/mods"
     os.execute('mkdir -p "' .. mods_path .. '"')
@@ -99,40 +102,68 @@ local function load_external_mods()
         if fname:sub(-4) == ".lua" then
             pcall(function()
                 local chunk = love.filesystem.load("ext_mods/" .. fname)
-                if chunk then pcall(chunk) end
+                if chunk then
+                    pcall(chunk)
+                    _LOADED_MODS[#_LOADED_MODS+1] = fname:sub(1,-5)
+                end
             end)
         else
             local info = love.filesystem.getInfo("ext_mods/" .. fname)
             if info and info.type == "directory" then
                 local mod_id  = fname:match("^([^%-]+)") or fname
                 local mod_vfs = "ext_mods/" .. fname .. "/"
-                -- Set current_mod so SMODS.Atlas / SMODS.Joker use right prefix
-                SMODS.current_mod = {
-                    id   = mod_id,
-                    path = mod_vfs,
-                    config = {},
-                    save_mod_config = function() end,
-                    load_mod_config = function() end,
-                }
-                -- Try common entry points
+                SMODS.current_mod = { id=mod_id, path=mod_vfs, config={},
+                    save_mod_config=function() end, load_mod_config=function() end }
+                -- Temporarily remap SMODS.Joker to use this mod's key prefix
+                local orig_Joker = SMODS.Joker
+                SMODS.Joker = function(t)
+                    local full_key = "j_" .. mod_id .. "_" .. t.key
+                    t._full_key = full_key
+                    t._mod_id = mod_id
+                    SMODS._jokers[full_key] = t
+                    return t
+                end
+                local loaded = false
                 local base = mod_id
                 for _, ep in ipairs({"main.lua", fname..".lua", base..".lua"}) do
                     if love.filesystem.getInfo(mod_vfs .. ep) then
                         pcall(function()
                             local chunk = love.filesystem.load(mod_vfs .. ep)
-                            if chunk then pcall(chunk) end
+                            if chunk then pcall(chunk); loaded = true end
                         end)
                         break
                     end
                 end
-                -- Register any jokers/atlases this mod declared
-                if SMODS and SMODS._register_new then SMODS._register_new() end
+                SMODS.Joker = orig_Joker
+                if SMODS._register_new then SMODS._register_new(mod_id, mod_vfs) end
+                if loaded then _LOADED_MODS[#_LOADED_MODS+1] = fname end
             end
         end
     end
-    -- Restore imbored as current mod
     SMODS.current_mod = { id="imbored", path="mods/imbored/", config={},
         save_mod_config=function() end, load_mod_config=function() end }
+end
+
+local function draw_mods_overlay()
+    if not (_LOADED_MODS and #_LOADED_MODS > 0) then return end
+    if not _mods_font then _mods_font = love.graphics.newFont(11) end
+    local sw = love.graphics.getWidth()
+    love.graphics.origin()
+    love.graphics.setScissor()
+    love.graphics.setFont(_mods_font)
+    -- header
+    local ext = #_LOADED_MODS - 1
+    local header = ext .. " external mod" .. (ext ~= 1 and "s" or "") .. " loaded"
+    local lines = { header }
+    for _, m in ipairs(_LOADED_MODS) do lines[#lines+1] = "  " .. m end
+    local text = table.concat(lines, "\n")
+    -- shadow
+    love.graphics.setColor(0, 0, 0, 0.6)
+    love.graphics.printf(text, 1, 51, sw - 9, "right")
+    -- white text
+    love.graphics.setColor(1, 1, 1, 0.9)
+    love.graphics.printf(text, 0, 50, sw - 10, "right")
+    love.graphics.setColor(1, 1, 1, 1)
 end
 
 local isTvOs = false
@@ -324,6 +355,7 @@ function love.draw()
 		--Perf monitoring checkpoint
 		timer_checkpoint(nil, 'draw', true)
 		G:draw()
+		draw_mods_overlay()
 	end
 end
 
