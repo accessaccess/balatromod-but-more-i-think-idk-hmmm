@@ -18,6 +18,7 @@ SMODS.Booster = function(t) return t end
 SMODS.Challenge = function(t) return t end
 SMODS.Stake = function(t) return t end
 SMODS.Sound = function(t) return t end
+SMODS.Shader = function(t) return t end
 SMODS.current_mod = { config = {}, save_mod_config = function() end, load_mod_config = function() end }
 
 -- Stub probability helpers used by some jokers
@@ -27,6 +28,28 @@ end
 SMODS.pseudorandom_probability = function(card, group, numerator, denominator, key, guaranteed)
     return pseudorandom(key) < (numerator / denominator)
 end
+
+-- Stub card-finding helpers used by some jokers at runtime
+SMODS.find_card = function(key)
+    if not (G and G.jokers and G.jokers.cards) then return {} end
+    local result = {}
+    for _, card in ipairs(G.jokers.cards) do
+        if card.config and card.config.center and card.config.center.key == key then
+            result[#result+1] = card
+        end
+    end
+    return result
+end
+
+-- Stub effect helpers used by jokers with add_to_deck / calculate
+SMODS.calculate_effect = function(effect, card) end
+SMODS.change_play_limit = function(amount)
+    if G and G.GAME and G.GAME.starting_params then
+        G.GAME.starting_params.play_limit = (G.GAME.starting_params.play_limit or 5) + amount
+        if G.hand then G.hand.config.card_limit = G.GAME.starting_params.play_limit end
+    end
+end
+SMODS.add_card = function(args) return nil end
 
 function SMODS.Atlas(t)
     -- Support :register() chaining (some atlases call it)
@@ -61,12 +84,15 @@ function SMODS._init()
     local order = 500
     for key, j in pairs(SMODS._jokers) do
         order = order + 1
+        -- Clamp rarity to numeric 1-4 (custom string rarities map to common=1)
+        local rarity = j.rarity
+        if type(rarity) ~= 'number' or rarity < 1 or rarity > 4 then rarity = 1 end
         G.P_CENTERS[key] = {
             key = key,
             set = "Joker",
             name = (j.loc_txt and j.loc_txt.name) or key,
             cost = j.cost or 4,
-            rarity = j.rarity or 1,
+            rarity = rarity,
             unlocked = (j.unlocked ~= false),
             start_alerted = true,
             discovered = (j.discovered ~= false),
@@ -87,6 +113,23 @@ function SMODS._init()
                 name = j.loc_txt.name or key,
                 text = j.loc_txt.text or {""}
             }
+        end
+        -- Add to pools so jokers appear in shop / rarity pools
+        if G.P_CENTER_POOLS then
+            local pool = G.P_CENTER_POOLS['Joker']
+            if pool then
+                local found = false
+                for _, pc in ipairs(pool) do if pc.key == key then found = true; break end end
+                if not found then pool[#pool+1] = G.P_CENTERS[key] end
+            end
+        end
+        if G.P_JOKER_RARITY_POOLS then
+            local rpool = G.P_JOKER_RARITY_POOLS[rarity]
+            if rpool then
+                local found = false
+                for _, pc in ipairs(rpool) do if pc.key == key then found = true; break end end
+                if not found then rpool[#rpool+1] = G.P_CENTERS[key] end
+            end
         end
     end
 

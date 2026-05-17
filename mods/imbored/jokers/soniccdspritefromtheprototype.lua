@@ -66,10 +66,10 @@ SMODS.Joker{ --sonic cd sprite from the prototype
 
 local card_get_id_ref = Card.get_id
 function Card:get_id()
-    local original_id = card_get_id_ref(self)
+    local original_id = card_get_id_ref and card_get_id_ref(self)
     if not original_id then return original_id end
 
-    if next(SMODS.find_card("j_imbored_soniccdspritefromtheprototype")) then
+    if SMODS.find_card and next(SMODS.find_card("j_imbored_soniccdspritefromtheprototype")) then
         if original_id >= 11 and original_id <= 13 then return 14 end
     end
     return original_id

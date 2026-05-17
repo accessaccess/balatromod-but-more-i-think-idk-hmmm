@@ -69,14 +69,16 @@ SMODS.Joker{ --...
 
 local card_set_cost_ref = Card.set_cost
 function Card:set_cost()
-    card_set_cost_ref(self)
-    
-    if next(SMODS.find_card("j_imbored_you_know")) then
-        if (self.ability.set == 'Joker' or self.ability.set == 'Tarot' or self.ability.set == 'Planet' or self.ability.set == 'Spectral' or self.ability.set == 'Enhanced' or self.ability.set == 'Booster' or self.ability.set == 'Voucher') then
+    if card_set_cost_ref then card_set_cost_ref(self) end
+
+    if SMODS.find_card and next(SMODS.find_card("j_imbored_you_know")) then
+        if self.ability and (self.ability.set == 'Joker' or self.ability.set == 'Tarot' or self.ability.set == 'Planet' or self.ability.set == 'Spectral' or self.ability.set == 'Enhanced' or self.ability.set == 'Booster' or self.ability.set == 'Voucher') then
             self.cost = math.max(0, self.cost - (-6))
         end
     end
-    
-    self.sell_cost = math.max(1, math.floor(self.cost / 2)) + (self.ability.extra_value or 0)
-    self.sell_cost_label = self.facing == 'back' and '?' or self.sell_cost
+
+    if self.ability then
+        self.sell_cost = math.max(1, math.floor((self.cost or 0) / 2)) + (self.ability.extra_value or 0)
+        self.sell_cost_label = self.facing == 'back' and '?' or self.sell_cost
+    end
 end

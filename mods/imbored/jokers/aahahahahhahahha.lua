@@ -75,20 +75,24 @@ SMODS.Joker{ --AAHAHAHAHHAHAHHA
     end
 }
 
-local check_for_buy_space_ref = G.FUNCS.check_for_buy_space
-G.FUNCS.check_for_buy_space = function(card)
-    if card.config.center.key == "j_imbored_aahahahahhahahha" then -- ignore slot limit when bought
-        return true
+if G and G.FUNCS then
+    local check_for_buy_space_ref = G.FUNCS.check_for_buy_space
+    G.FUNCS.check_for_buy_space = function(card)
+        if card.config and card.config.center and card.config.center.key == "j_imbored_aahahahahhahahha" then
+            return true
+        end
+        if check_for_buy_space_ref then return check_for_buy_space_ref(card) end
     end
-    return check_for_buy_space_ref(card)
-end
 
-local can_select_card_ref = G.FUNCS.can_select_card
-G.FUNCS.can_select_card = function(e)
-    	if e.config.ref_table.config.center.key == "j_imbored_aahahahahhahahha" then
-        		e.config.colour = G.C.GREEN
-        		e.config.button = "use_card"
-    	else
-        		can_select_card_ref(e)
-    	end
+    local can_select_card_ref = G.FUNCS.can_select_card
+    G.FUNCS.can_select_card = function(e)
+        if e.config and e.config.ref_table and e.config.ref_table.config and
+           e.config.ref_table.config.center and
+           e.config.ref_table.config.center.key == "j_imbored_aahahahahhahahha" then
+            e.config.colour = G.C.GREEN
+            e.config.button = "use_card"
+        else
+            if can_select_card_ref then can_select_card_ref(e) end
+        end
+    end
 end
