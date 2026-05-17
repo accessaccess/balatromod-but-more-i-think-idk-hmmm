@@ -889,6 +889,7 @@ function Game:init_item_prototypes()
     for k, v in pairs(self.P_CENTERS) do
         v.key = k
         local function add_to_pool(_pool, _card)
+            if not _pool then return end
             for _, pc in ipairs(_pool) do
                 if pc.key == _card.key then return end
             end

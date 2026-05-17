@@ -1,0 +1,147 @@
+local constructor = require("imm.lib.constructor")
+local co = require("imm.lib.co")
+local logger = require("imm.logger")
+local imm = require("imm")
+local util= require("imm.lib.util")
+
+--- @class imm.Task.Download.Co
+--- @field blacklistUrls? table<string>
+--- @field modlist imm.Mod[]
+--- @field errors string[]
+local IBTaskDownCo = {
+    allowNoReleaseUseCommit = not imm.config.noAutoDownloadUnreleasedMods,
+    installMissings = true
+}
+
+--- @class imm.Brower.Task.Download.Extra
+--- @field name? string
+--- @field size? number
+
+--- @protected
+--- @param tasks imm.Tasks
+function IBTaskDownCo:init(tasks)
+    self.tasks = tasks
+    self.blacklistUrls = {}
+    self.modlistSets = {}
+    self.modlist = {}
+    self.errors = {}
+end
+
+--- @async
+--- @param url string
+--- @param extra? imm.Brower.Task.Download.Extra
+--- @return string? err
+function IBTaskDownCo:download(url, extra)
+    extra = extra or {}
+    local name = extra.name or 'something'
+    local size = extra.size and extra.size / 1048576
+
+    local done = self.tasks.queues:queueCo()
+
+    if self.blacklistUrls[url] then return done() end
+    self.blacklistUrls[url] = true
+
+    local status = self.tasks.status:new()
+    local t = string.format('Downloading %s', name)
+    local t2 = t
+    if size then t2 = string.format('%s (%.1fMB)', t, size) end
+
+    status:update(t2)
+
+    local res, err = self.tasks.repo.api.blob:fetchCo(url, {
+        onProgress = function (dltotal, dlnow, ultotal, ulnow)
+            if dltotal == 0 then dltotal = size else dltotal = dltotal / 1048576 end
+            dlnow = dlnow and dlnow / 1048576
+
+            local tp = dltotal and string.format('%.1fMB/%.1fMB, %.2f%%', dlnow, dltotal, dlnow/dltotal*100) or string.format('%.1fMB', dlnow)
+            status:updatef('%s (%s)', t, tp)
+        end
+    })
+    if not res then
+        self.blacklistUrls[url] = false
+        local errfmt = string.format('Failed downloading %s: %s', name, err)
+        status:error(errfmt)
+        table.insert(self.errors, errfmt)
+        done()
+    else
+        done()
+        status:done('')
+        self:installModFromZipCo(res)
+        self.tasks.status:removeElm(status)
+    end
+
+    return err
+end
+
+--- @async
+--- @param id string
+--- @param list imm.Dependency.Rule[][]
+function IBTaskDownCo:downloadMissingModEntry(id, list)
+    local mod = self.tasks.repo:getMod(id)
+    if not mod then return logger.fmt('warn', 'Mod id %s does not exist in repo', id) end
+
+    local releases = mod:getReleasesCo()
+    local release, pre = mod:findModVersionToDownload(list)
+
+    if not release and self.allowNoReleaseUseCommit and mod.bmi and #releases == 0 then
+        logger.fmt('warn', 'Mod %s does not have any release, using source', mod:id())
+        release = { format = 'bmi', url = mod.bmi.download_url, version = 'Source' }
+    end
+
+    if not release then
+        logger.fmt('warn', 'Failed to download missing dependencies %s', mod:title())
+        return
+    end
+
+    if pre then
+        logger.fmt('warn', 'A prerelease version %s %s is being downloaded', mod:title(), release.version)
+    end
+
+    self:download(release.url, { name = mod:title()..' '..release.version, size = release.size })
+end
+
+--- @async
+--- @param mod imm.Mod
+function IBTaskDownCo:downloadMissings(mod)
+    local missings = self.tasks.ctrl:getMissingDeps(mod.deps)
+
+    local queues = {}
+    for missingid, missingList in pairs(missings) do
+        logger.fmt('log', 'Missing dependency %s by %s', missingid, mod.mod)
+        table.insert(queues, function () self:downloadMissingModEntry(missingid, missingList) end)
+    end
+    co.all(queues)
+end
+
+--- @async
+--- @param info imm.InstallResult
+function IBTaskDownCo:handleInstallResult(info)
+    if self.installMissings then
+        local queues = {}
+        for i, mod in ipairs(info.installed) do table.insert(queues, function() self:downloadMissings(mod) end) end
+        co.all(queues)
+    end
+
+    util.insertBatch(self.modlist, info.installed)
+    util.insertBatch(self.errors, info.errors)
+
+    return info
+end
+
+--- @async
+--- @param data love.Data
+function IBTaskDownCo:installModFromZipCo(data)
+    return self:handleInstallResult(self.tasks:installModFromZipCo(data))
+end
+
+---@async
+---@param dir string
+---@param sorucenfs boolean
+function IBTaskDownCo:installModFromDir(dir, sorucenfs)
+    return self:handleInstallResult(self.tasks:installModFromDirCo(dir, sorucenfs))
+end
+
+--- @alias imm.Task.Download.Co.C p.Constructor<imm.Task.Download.Co, nil> | fun(tasks: imm.Tasks): imm.Task.Download.Co
+--- @type imm.Task.Download.Co.C
+local BTaskDownCo = constructor(IBTaskDownCo)
+return  BTaskDownCo

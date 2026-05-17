@@ -1,0 +1,23 @@
+local ModCtrl = require("imm.mod.ctrl")
+local ModList = require("imm.mod.list")
+local ctrl = ModCtrl()
+local imm = require("imm")
+
+if G then
+    ctrl.mods.Balatro = ModList('Balatro', true)
+    ctrl:addEntry(ctrl.mods.Balatro:createVersion(G.VERSION, { loaded = true }))
+end
+if imm.lovelyver then
+    ctrl.mods.Lovely = ModList('Lovely', true)
+    ctrl:addEntry(ctrl.mods.Lovely:createVersion(imm.lovelyver, { loaded = true }))
+
+    ctrl.mods.lovely = ModList('lovely', true)
+    ctrl:addEntry(ctrl.mods.lovely:createVersion(imm.lovelyver, { loaded = true }))
+end
+
+ctrl.mods[""] = ModList("", true)
+ctrl:addEntry(ctrl.mods[""]:createVersion("1.0.0", { loaded = true }))
+
+_G.immctrl = ctrl
+
+return ctrl

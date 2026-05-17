@@ -1,0 +1,32 @@
+[manifest]
+version = "1.0.0"
+priority = 2147483647
+
+# my day will be slightly nicer when lovely 0.9.0 is released
+#[[patches]]
+#[patches.copy]
+#target = "main.lua"
+#position = "append"
+#payload = '''_imm.path = "{{lovely_hack:patch_dir}}"'''
+
+[[patches]]
+[patches.pattern]
+target = "main.lua"
+position = "at"
+pattern = "imm.path = nil"
+payload = '''
+imm.path = "{{lovely_hack:patch_dir}}"
+'''
+match_indent = true
+
+[[patches]]
+[patches.copy]
+target = "main.lua"
+position = "prepend"
+sources = ["imm/init/patch_prepend.txt"]
+
+[[patches]]
+[patches.copy]
+target = "main.lua"
+position = "append"
+sources = ["imm/init/patch_append.txt", "imm/init/main.lua", "imm/init/early_error.lua"]

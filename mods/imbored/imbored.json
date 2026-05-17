@@ -1,0 +1,17 @@
+{
+  "id": "imbored",
+  "name": "im bored",
+  "author": [
+    "Unfancy"
+  ],
+  "description": "i made something i bored",
+  "prefix": "imbored",
+  "main_file": "main.lua",
+  "version": "0.2.0",
+  "priority": 0,
+  "badge_colour": "6F00D6",
+  "badge_text_colour": "FFFFFF",
+  "dependencies": [
+    "Steamodded (>=1.0.0~BETA-0827c)"
+  ]
+}

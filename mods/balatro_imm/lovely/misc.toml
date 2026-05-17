@@ -1,0 +1,82 @@
+[manifest]
+version = "1.0.0"
+priority = -11
+
+# fix checkbox ui crash
+[[patches]]
+[patches.regex]
+target = "functions/button_callbacks.lua"
+position = "at"
+pattern = '''e\.children\[1\]\.states\.visible = \w+\n\s*e\.children\[1\]\.config\.object\.states\.visible = \w+'''
+payload = '''
+if e.children[1] then
+$0
+end
+'''
+count = 2
+
+# add some extra characters to extended text input
+[[patches]]
+[patches.regex]
+target = "functions/button_callbacks.lua"
+pattern = '''extended_corpus and "'''
+position = "after"
+payload = "@#/"
+
+# allow colour for create_tabs
+[[patches]]
+[patches.regex]
+target = "functions/UI_definitions.lua"
+pattern = '''button = 'change_tab','''
+position = "after"
+payload = "colour = args.colour,"
+
+# allow text_scale for tooltips
+[[patches]]
+[patches.regex]
+target = "functions/UI_definitions.lua"
+pattern = '''G\.C\.UI\.TEXT_DARK, scale = 0\.4'''
+position = "at"
+payload = "G.C.UI.TEXT_DARK, scale = tooltip.text_scale or 0.4"
+times = 3
+
+# allow passing ref_table to create_UIBox_generic_options
+[[patches]]
+[patches.regex]
+target = "functions/UI_definitions.lua"
+pattern = '''button = back_func'''
+position = "after"
+payload = ", ref_table = args.ref_table"
+
+# fix text input to allow multiple instance of text inputs
+[[patches]]
+[patches.pattern]
+target = "functions/UI_definitions.lua"
+pattern = '''
+{n=G.UIT.C, config={align = "cm", draw_layer = 1, colour = G.C.CLEAR}, nodes = {
+{n=G.UIT.C, config={id = 'text_input', align = "cm", padding = 0.05, r = 0.1, draw_layer = 2, hover = true, colour = args.colour,minw = args.w, min_h = args.h, button = 'select_text_input', shadow = true}, nodes={
+'''
+position = "at"
+payload = '''
+{n=G.UIT.C, config={align = "cm", colour = G.C.CLEAR}, nodes = {
+{n=G.UIT.C, config={id = 'text_input', align = "cm", padding = 0.05, r = 0.1, hover = true, colour = args.colour,minw = args.w, min_h = args.h, button = 'select_text_input', shadow = true}, nodes={
+'''
+match_indent = true
+
+# fix multiple text input focus
+[[patches]]
+[patches.pattern]
+target = "functions/button_callbacks.lua"
+pattern = '''if G.CONTROLLER.text_input_hook then'''
+position = "at"
+payload = '''if G.CONTROLLER.text_input_hook == e.parent then'''
+match_indent = true
+
+# fix 0 inputted as o
+[[patches]]
+[patches.pattern]
+target = "functions/button_callbacks.lua"
+pattern = '''if args.key == '0' then args.key = 'o' end'''
+position = "at"
+payload = ''''''
+match_indent = true
