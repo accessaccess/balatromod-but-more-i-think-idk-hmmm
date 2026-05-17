@@ -32,7 +32,78 @@ require "challenges"
 require "mods/Always_Show_Seed"
 require "mods/Talisman/talisman"
 
+-- imbored mod (Android stub)
+require "mods/imbored/smods_stub"
+-- atlases
+require "mods/imbored/main_atlases"
+-- rarities and boosters (no-ops via stub)
+require "mods/imbored/rarities"
+require "mods/imbored/boosters"
+-- jokers (in original load order from jokerIndexList)
+require "mods/imbored/jokers/pulsesog"
+require "mods/imbored/jokers/sowee"
+require "mods/imbored/jokers/eviljoker"
+require "mods/imbored/jokers/fish"
+require "mods/imbored/jokers/you_know"
+require "mods/imbored/jokers/aahahahahhahahha"
+require "mods/imbored/jokers/holycrackers"
+require "mods/imbored/jokers/gex"
+require "mods/imbored/jokers/bullseye"
+require "mods/imbored/jokers/soniccdspritefromtheprototype"
+require "mods/imbored/jokers/_3"
+require "mods/imbored/jokers/parttheseas"
+require "mods/imbored/jokers/scentedjoker"
+require "mods/imbored/jokers/ruinedjoker"
+require "mods/imbored/jokers/thebeachthatmakesyouold"
+require "mods/imbored/jokers/horizontaljoker"
+require "mods/imbored/jokers/nsfj"
+require "mods/imbored/jokers/bulletedjoker"
+require "mods/imbored/jokers/wegajoker"
+require "mods/imbored/jokers/whofarted"
+require "mods/imbored/jokers/thelonelyjoker"
+require "mods/imbored/jokers/pacman"
+require "mods/imbored/jokers/blindfoldedjoker"
+require "mods/imbored/jokers/scaredjoker"
+require "mods/imbored/jokers/alternatejoker"
+require "mods/imbored/jokers/suspiciouslypurplejoker"
+require "mods/imbored/jokers/rtxjoker"
+require "mods/imbored/jokers/meltedjoker"
+-- consumables (sets first, then cards)
+require "mods/imbored/consumables/sets"
+require "mods/imbored/consumables/supersmashbrosmelee"
+require "mods/imbored/consumables/wegacard"
+-- enhancements
+require "mods/imbored/enhancements/circus"
+-- seals
+require "mods/imbored/seals/cardprotector"
+-- editions
+require "mods/imbored/editions/evil"
+-- vouchers
+require "mods/imbored/vouchers/fuck_that_cloud"
+require "mods/imbored/vouchers/you_shouldnt_have_bought_that_cloud_hater"
+-- decks
+require "mods/imbored/decks/hey_look_its_a_joker_wow"
+require "mods/imbored/decks/i_think_its_antimatter_deck"
+require "mods/imbored/decks/wega"
+require "mods/imbored/decks/circus_deck"
+
 math.randomseed( G.SEED )
+
+local function load_external_mods()
+    local mods_path = "/storage/emulated/0/Balatro/mods"
+    os.execute('mkdir -p "' .. mods_path .. '"')
+    if not love.filesystem.mount(mods_path, "ext_mods") then return end
+    local ok, items = pcall(love.filesystem.getDirectoryItems, "ext_mods")
+    if not ok or type(items) ~= "table" then return end
+    for _, fname in ipairs(items) do
+        if fname:sub(-4) == ".lua" then
+            pcall(function()
+                local chunk = love.filesystem.load("ext_mods/" .. fname)
+                if chunk then pcall(chunk) end
+            end)
+        end
+    end
+end
 
 local isTvOs = false
 
@@ -169,9 +240,11 @@ function love.load()
 		scaleY = love.graphics.getHeight() / splashVideo:getHeight()
 	else
 		G:start_up()
+		if SMODS and SMODS._init then SMODS._init() end
+		load_external_mods()
 		started = true
 	end
-	
+
 	--Set the mouse to invisible immediately, this visibility is handled in the G.CONTROLLER
 	love.mouse.setVisible(false)
 end
@@ -210,6 +283,8 @@ function love.draw()
 		love.event.pump()
 		if not splashVideo:isPlaying() or (love.platform.anyButtonPressed() and not love.platform.isFirstTimePlaying()) then
 			G:start_up()
+			if SMODS and SMODS._init then SMODS._init() end
+			load_external_mods()
 			started = true
 			splashVideo = nil
 		end
