@@ -1,0 +1,7 @@
+require('imm.ui.init_atlas')
+require('imm.ui.dropinstall')
+require('imm.ui.funcs.browser')
+require('imm.ui.funcs.confirm_toggle')
+require('imm.ui.funcs.mod')
+require('imm.ui.funcs.opts')
+require('imm.ui.funcs.version')

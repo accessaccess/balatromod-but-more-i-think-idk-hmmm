@@ -1,0 +1,10 @@
+{
+    "name": "imbored",
+    "version_number": "0.2.1",
+    "website_url": "https://github.com/unfanciousthewizard/imbored-balatro/",
+    "description": "got bored",
+    "dependencies": [
+        "Steamodded-Steamodded-0.9.8",
+	"Thunderstore-lovely-0.8.0"
+    ]
+}
