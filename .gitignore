@@ -56,4 +56,3 @@ dexopt
 localization/*
 !localization/en_us.lua
 challenges.lua
-*.apk
