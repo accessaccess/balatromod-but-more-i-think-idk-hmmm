@@ -101,8 +101,38 @@ local function load_external_mods()
                 local chunk = love.filesystem.load("ext_mods/" .. fname)
                 if chunk then pcall(chunk) end
             end)
+        else
+            local info = love.filesystem.getInfo("ext_mods/" .. fname)
+            if info and info.type == "directory" then
+                local mod_id  = fname:match("^([^%-]+)") or fname
+                local mod_vfs = "ext_mods/" .. fname .. "/"
+                -- Set current_mod so SMODS.Atlas / SMODS.Joker use right prefix
+                SMODS.current_mod = {
+                    id   = mod_id,
+                    path = mod_vfs,
+                    config = {},
+                    save_mod_config = function() end,
+                    load_mod_config = function() end,
+                }
+                -- Try common entry points
+                local base = mod_id
+                for _, ep in ipairs({"main.lua", fname..".lua", base..".lua"}) do
+                    if love.filesystem.getInfo(mod_vfs .. ep) then
+                        pcall(function()
+                            local chunk = love.filesystem.load(mod_vfs .. ep)
+                            if chunk then pcall(chunk) end
+                        end)
+                        break
+                    end
+                end
+                -- Register any jokers/atlases this mod declared
+                if SMODS and SMODS._register_new then SMODS._register_new() end
+            end
         end
     end
+    -- Restore imbored as current mod
+    SMODS.current_mod = { id="imbored", path="mods/imbored/", config={},
+        save_mod_config=function() end, load_mod_config=function() end }
 end
 
 local isTvOs = false
